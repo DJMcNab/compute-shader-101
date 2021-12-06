@@ -92,6 +92,7 @@ fn main([[builtin(local_invocation_id)]] local_id: vec3<u32>) {
             }
             workgroupBarrier();
             flag = shared_flag;
+            workgroupBarrier();
             storageBarrier();
             if (flag == FLAG_PREFIX_READY) {
                 if (local_id.x == workgroup_size - 1u) {
