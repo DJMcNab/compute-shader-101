@@ -20,7 +20,7 @@ use std::{num::NonZeroU64, time::Instant};
 
 use rust_gpu_prefix_shared::WORKGROUP_SIZE;
 use spirv_builder::SpirvBuilder;
-use wgpu::util::{make_spirv, DeviceExt};
+use wgpu::util::{make_spirv_raw, DeviceExt};
 
 use bytemuck;
 
@@ -46,7 +46,9 @@ async fn run() {
             &wgpu::DeviceDescriptor {
                 label: None,
                 features: features
-                    & (wgpu::Features::TIMESTAMP_QUERY | wgpu::Features::CLEAR_COMMANDS),
+                    & (wgpu::Features::TIMESTAMP_QUERY
+                        | wgpu::Features::CLEAR_COMMANDS
+                        | wgpu::Features::SPIRV_SHADER_PASSTHROUGH),
                 limits: Default::default(),
             },
             None,
@@ -70,11 +72,14 @@ async fn run() {
 
     let start_instant = Instant::now();
     let module_final = std::fs::read(build.module.unwrap_single()).unwrap();
-    let shader = make_spirv(&module_final);
-    let cs_module = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
-        label: None,
-        source: shader,
-    });
+    let shader = make_spirv_raw(&module_final);
+    // The shader is probably safe?
+    let cs_module = unsafe {
+        device.create_shader_module_spirv(&wgpu::ShaderModuleDescriptorSpirV {
+            label: None,
+            source: shader,
+        })
+    };
     println!("shader compilation {:?}", start_instant.elapsed());
     let input_f: Vec<u32> = (0..N_DATA as u32).collect();
     let input: &[u8] = bytemuck::cast_slice(&input_f);
