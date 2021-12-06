@@ -1,4 +1,6 @@
-use core::sync::atomic::{AtomicU32, Ordering};
+use core::sync::atomic::AtomicU32;
+#[cfg(not(target_arch = "spirv"))]
+use core::sync::atomic::Ordering;
 
 pub fn atomic_add_relaxed(atomic: &AtomicU32, amount: u32) -> u32 {
     {

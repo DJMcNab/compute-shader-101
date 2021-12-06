@@ -63,7 +63,7 @@ async fn run() {
         None
     };
 
-    let build = SpirvBuilder::new("./shaders", "spirv-unknown-vulkan1.2")
+    let build = SpirvBuilder::new("./shaders", "spirv-unknown-spv1.5")
         .print_metadata(spirv_builder::MetadataPrintout::None)
         .build()
         .expect("Correctly setup");
@@ -89,7 +89,7 @@ async fn run() {
         usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
         mapped_at_creation: false,
     });
-    const N_WG: usize = N_DATA / WORKGROUP_SIZE;
+    const N_WG: usize = N_DATA / (WORKGROUP_SIZE as usize);
     const STATE_SIZE: usize = N_WG * 3 + 1;
     // TODO: round this up
     let state_buf = device.create_buffer(&wgpu::BufferDescriptor {
@@ -205,5 +205,6 @@ async fn run() {
 }
 
 fn main() {
+    env_logger::init();
     pollster::block_on(run());
 }

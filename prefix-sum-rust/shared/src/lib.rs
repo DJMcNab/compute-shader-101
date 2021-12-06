@@ -1,3 +1,3 @@
 #![no_std]
 
-pub const WORKGROUP_SIZE: usize = 512;
+pub const WORKGROUP_SIZE: u32 = 512;
