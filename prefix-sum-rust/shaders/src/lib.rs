@@ -39,9 +39,7 @@ unsafe fn storage_barrier() {
     >()
 }
 
-// HACK: Currently, we run into https://github.com/gfx-rs/naga/issues/1575, so request for loops to be unrolled
 #[spirv(compute(threads(512)))]
-#[spirv(unroll_loops)]
 pub fn main(
     #[spirv(workgroup)] part_id: &mut u32,
     #[spirv(workgroup)] scratch: &mut [u32; WORKGROUP_SIZE as usize],
