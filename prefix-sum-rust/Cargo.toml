@@ -1,5 +1,5 @@
 [package]
-name = "compute-shader-hello"
+name = "rust-gpu-prefix"
 version = "0.1.0"
 authors = ["Raph Levien <raph@google.com>"]
 license = "MIT/Apache-2.0"
@@ -11,3 +11,8 @@ wgpu = "0.11.0"
 env_logger = "0.8"
 pollster = "0.2"
 bytemuck = { version = "1.7", features = ["derive"] }
+async-executor = "1.0"
+spirv-builder = { git = "https://github.com/EmbarkStudios/rust-gpu", rev = "56ba2d2afa5a64db26cac631d33c42fca521f1d2", features = [
+    "watch",
+] }
+rust-gpu-prefix-shared = { path = "./shared" }
