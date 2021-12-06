@@ -917,9 +917,6 @@ dependencies = [
 [[package]]
 name = "rust-gpu-prefix-shared"
 version = "0.1.0"
-dependencies = [
- "bytemuck",
-]
 
 [[package]]
 name = "rustc-demangle"

@@ -18,13 +18,13 @@
 
 use std::{num::NonZeroU64, time::Instant};
 
+use rust_gpu_prefix_shared::WORKGROUP_SIZE;
 use spirv_builder::SpirvBuilder;
 use wgpu::util::{make_spirv, DeviceExt};
 
 use bytemuck;
 
 const N_DATA: usize = 1 << 25;
-const WG_SIZE: usize = 1 << 12;
 
 // Verify that the data is OEIS A000217
 fn verify(data: &[u32]) -> Option<usize> {
@@ -89,7 +89,7 @@ async fn run() {
         usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
         mapped_at_creation: false,
     });
-    const N_WG: usize = N_DATA / WG_SIZE;
+    const N_WG: usize = N_DATA / WORKGROUP_SIZE;
     const STATE_SIZE: usize = N_WG * 3 + 1;
     // TODO: round this up
     let state_buf = device.create_buffer(&wgpu::BufferDescriptor {
