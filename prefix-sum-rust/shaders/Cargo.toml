@@ -12,6 +12,5 @@ crate-type = ["dylib"]
 [dependencies]
 spirv-std = { git = "https://github.com/EmbarkStudios/rust-gpu", rev = "56ba2d2afa5a64db26cac631d33c42fca521f1d2", features = [
     "glam",
-    "const-generics",
 ] }
 rust-gpu-prefix-shared = { path = "../shared" }

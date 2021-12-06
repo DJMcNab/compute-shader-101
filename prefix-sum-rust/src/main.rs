@@ -16,9 +16,10 @@
 
 //! A simple application to run a compute shader.
 
-use std::time::Instant;
+use std::{num::NonZeroU64, time::Instant};
 
-use wgpu::util::DeviceExt;
+use spirv_builder::SpirvBuilder;
+use wgpu::util::{make_spirv, DeviceExt};
 
 use bytemuck;
 
@@ -44,7 +45,8 @@ async fn run() {
         .request_device(
             &wgpu::DeviceDescriptor {
                 label: None,
-                features: features & (wgpu::Features::TIMESTAMP_QUERY | wgpu::Features::CLEAR_COMMANDS),
+                features: features
+                    & (wgpu::Features::TIMESTAMP_QUERY | wgpu::Features::CLEAR_COMMANDS),
                 limits: Default::default(),
             },
             None,
@@ -61,11 +63,17 @@ async fn run() {
         None
     };
 
+    let build = SpirvBuilder::new("./shaders", "spirv-unknown-vulkan1.2")
+        .print_metadata(spirv_builder::MetadataPrintout::None)
+        .build()
+        .expect("Correctly setup");
+
     let start_instant = Instant::now();
+    let module_final = std::fs::read(build.module.unwrap_single()).unwrap();
+    let shader = make_spirv(&module_final);
     let cs_module = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
         label: None,
-        //source: wgpu::ShaderSource::SpirV(bytes_to_u32(include_bytes!("alu.spv")).into()),
-        source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
+        source: shader,
     });
     println!("shader compilation {:?}", start_instant.elapsed());
     let input_f: Vec<u32> = (0..N_DATA as u32).collect();
@@ -73,8 +81,7 @@ async fn run() {
     let input_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: None,
         contents: input,
-        usage: wgpu::BufferUsages::STORAGE
-            | wgpu::BufferUsages::COPY_SRC,
+        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
     });
     let output_buf = device.create_buffer(&wgpu::BufferDescriptor {
         label: None,
@@ -105,7 +112,32 @@ async fn run() {
         entry_point: "main",
     });
 
-    let bind_group_layout = pipeline.get_bind_group_layout(0);
+    // Something about the shaders rust-gpu outputs stops the automic bind_group_layout detection from working
+    let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        label: None,
+        entries: &[
+            wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                count: None,
+                visibility: wgpu::ShaderStages::COMPUTE,
+                ty: wgpu::BindingType::Buffer {
+                    has_dynamic_offset: false,
+                    min_binding_size: Some(NonZeroU64::new(4).unwrap()),
+                    ty: wgpu::BufferBindingType::Storage { read_only: false },
+                },
+            },
+            wgpu::BindGroupLayoutEntry {
+                binding: 1,
+                count: None,
+                visibility: wgpu::ShaderStages::COMPUTE,
+                ty: wgpu::BindingType::Buffer {
+                    has_dynamic_offset: false,
+                    min_binding_size: Some(NonZeroU64::new(4).unwrap()),
+                    ty: wgpu::BufferBindingType::Storage { read_only: false },
+                },
+            },
+        ],
+    });
     let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
         label: None,
         layout: &bind_group_layout,
