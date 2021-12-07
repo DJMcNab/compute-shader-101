@@ -18,7 +18,6 @@
 
 use std::{num::NonZeroU64, time::Instant};
 
-use rust_gpu_prefix_shared::WORKGROUP_SIZE;
 use spirv_builder::SpirvBuilder;
 use wgpu::util::{make_spirv_raw, DeviceExt};
 
