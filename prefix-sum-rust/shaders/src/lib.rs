@@ -4,6 +4,9 @@
     feature(register_attr),
     feature(core_intrinsics),
     feature(atomic_mut_ptr),
+    feature(asm),
+    feature(asm_const),
+    feature(asm_experimental_arch),
     register_attr(spirv)
 )]
 #![feature(int_log)]
@@ -12,7 +15,6 @@ mod atomics;
 
 use core::sync::atomic::AtomicU32;
 
-use atomics::atomic_add_relaxed;
 #[cfg(not(target_arch = "spirv"))]
 use spirv_std::macros::spirv;
 use spirv_std::{
@@ -23,7 +25,9 @@ use spirv_std::{
 
 use rust_gpu_prefix_shared::WORKGROUP_SIZE;
 
-use crate::atomics::{atomic_or_relaxed, atomic_store_relaxed};
+use crate::atomics::{
+    atomic_add_relaxed_storage, atomic_or_relaxed_storage, atomic_store_relaxed_storage,
+};
 
 const FLAG_NOT_READY: u32 = 0;
 const FLAG_AGGREGATE_READY: u32 = 1;
@@ -50,7 +54,7 @@ pub fn main(
     #[spirv(local_invocation_id)] local_id: UVec3,
 ) {
     if local_id.x == 0 {
-        *part_id = atomic_add_relaxed(&state_buf[0], 1);
+        *part_id = atomic_add_relaxed_storage(&state_buf[0], 1);
     }
     unsafe {
         workgroup_memory_barrier_with_group_sync();
@@ -87,9 +91,9 @@ pub fn main(
 
     let mut flag = FLAG_AGGREGATE_READY;
     if local_id.x == WORKGROUP_SIZE - 1 {
-        atomic_store_relaxed(&state_buf[(my_part_id * 3 + 2) as usize], el);
+        atomic_store_relaxed_storage(&state_buf[(my_part_id * 3 + 2) as usize], el);
         if my_part_id == 0 {
-            atomic_store_relaxed(&state_buf[(my_part_id * 3 + 3) as usize], el);
+            atomic_store_relaxed_storage(&state_buf[(my_part_id * 3 + 3) as usize], el);
             flag = FLAG_PREFIX_READY;
         }
     }
@@ -98,7 +102,7 @@ pub fn main(
         storage_barrier();
     }
     if local_id.x == WORKGROUP_SIZE - 1 {
-        atomic_store_relaxed(&state_buf[(my_part_id * 3 + 1) as usize], flag);
+        atomic_store_relaxed_storage(&state_buf[(my_part_id * 3 + 1) as usize], flag);
     }
 
     if my_part_id != 0 {
@@ -106,7 +110,8 @@ pub fn main(
         let mut look_back_ix = my_part_id - 1;
         loop {
             if local_id.x == WORKGROUP_SIZE - 1 {
-                *shared_flag = atomic_or_relaxed(&state_buf[(look_back_ix * 3 + 1) as usize], 0);
+                *shared_flag =
+                    atomic_or_relaxed_storage(&state_buf[(look_back_ix * 3 + 1) as usize], 0);
             }
             unsafe {
                 workgroup_memory_barrier_with_group_sync();
@@ -119,14 +124,14 @@ pub fn main(
             if flag == FLAG_PREFIX_READY {
                 if local_id.x == WORKGROUP_SIZE - 1 {
                     let their_prefix =
-                        atomic_or_relaxed(&state_buf[(look_back_ix * 3 + 3) as usize], 0);
+                        atomic_or_relaxed_storage(&state_buf[(look_back_ix * 3 + 3) as usize], 0);
                     exclusive_prefix = their_prefix + exclusive_prefix;
                 }
                 break;
             } else if flag == FLAG_AGGREGATE_READY {
                 if local_id.x == WORKGROUP_SIZE - 1 {
                     let their_agg =
-                        atomic_or_relaxed(&state_buf[(look_back_ix * 3 + 2) as usize], 0);
+                        atomic_or_relaxed_storage(&state_buf[(look_back_ix * 3 + 2) as usize], 0);
                     exclusive_prefix = their_agg + exclusive_prefix;
                 }
                 look_back_ix = look_back_ix - 1;
@@ -138,13 +143,19 @@ pub fn main(
         if local_id.x == WORKGROUP_SIZE - 1 {
             let inclusive_prefix = exclusive_prefix + el;
             *shared_prefix = exclusive_prefix;
-            atomic_store_relaxed(&state_buf[(my_part_id * 3 + 3) as usize], inclusive_prefix);
+            atomic_store_relaxed_storage(
+                &state_buf[(my_part_id * 3 + 3) as usize],
+                inclusive_prefix,
+            );
         }
         unsafe {
             storage_barrier();
         }
         if local_id.x == WORKGROUP_SIZE - 1 {
-            atomic_store_relaxed(&state_buf[(my_part_id * 3 + 1) as usize], FLAG_PREFIX_READY);
+            atomic_store_relaxed_storage(
+                &state_buf[(my_part_id * 3 + 1) as usize],
+                FLAG_PREFIX_READY,
+            );
         }
     }
     let mut prefix = 0;

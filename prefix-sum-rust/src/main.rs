@@ -94,7 +94,7 @@ async fn run() {
         usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
         mapped_at_creation: false,
     });
-    const N_WG: usize = N_DATA / (WORKGROUP_SIZE as usize);
+    const N_WG: usize = N_DATA / (1 << 12 as usize);
     const STATE_SIZE: usize = N_WG * 3 + 1;
     // TODO: round this up
     let state_buf = device.create_buffer(&wgpu::BufferDescriptor {
@@ -110,14 +110,6 @@ async fn run() {
         usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
     });
 
-    let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-        label: None,
-        layout: None,
-        module: &cs_module,
-        entry_point: "main",
-    });
-
-    // Something about the shaders rust-gpu outputs stops the automic bind_group_layout detection from working
     let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
         label: None,
         entries: &[
@@ -143,6 +135,18 @@ async fn run() {
             },
         ],
     });
+    let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        label: None,
+        bind_group_layouts: &[&bind_group_layout],
+        push_constant_ranges: &[],
+    });
+    let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+        label: None,
+        layout: Some(&pipeline_layout),
+        module: &cs_module,
+        entry_point: "main",
+    });
+
     let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
         label: None,
         layout: &bind_group_layout,
