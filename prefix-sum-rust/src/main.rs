@@ -143,7 +143,7 @@ async fn run() {
         label: None,
         layout: Some(&pipeline_layout),
         module: &cs_module,
-        entry_point: "main",
+        entry_point: "main_fs",
     });
 
     let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {

@@ -38,13 +38,13 @@ const N_SEQ: u32 = 8;
 unsafe fn storage_barrier() {
     control_barrier::<
         { memory::Scope::Workgroup as u32 },
-        { memory::Scope::Workgroup as u32 },
+        { memory::Scope::Device as u32 },
         { memory::Semantics::UNIFORM_MEMORY.bits() | memory::Semantics::ACQUIRE_RELEASE.bits() },
     >()
 }
 
 #[spirv(compute(threads(512)))]
-pub fn main(
+pub fn main_fs(
     #[spirv(workgroup)] part_id: &mut u32,
     #[spirv(workgroup)] scratch: &mut [u32; WORKGROUP_SIZE as usize],
     #[spirv(workgroup)] shared_prefix: &mut u32,
